@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fameboyq</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Instrument+Serif:ital@0;1&family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090c;
+      --text: #eaeaea;
+      --muted: #71767f;
+      --gold: #d4a373;
+      --gold-glow: rgba(212, 163, 115, 0.25);
+      --font-serif: 'Instrument Serif', Georgia, serif;
+      --font-mono: 'Martian Mono', monospace;
+      --font-hand: 'Caveat', cursive;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Canvas background */
+    #rain-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Corner metrics / audio pill */
+    .top-bar {
+      position: absolute;
+      top: 24px;
+      left: 28px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .views-counter {
+      color: var(--gold);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 18, 24, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(212, 163, 115, 0.15);
+    }
+
+    .audio-pill {
+      color: var(--gold);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 18, 24, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(212, 163, 115, 0.15);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .audio-pill:hover {
+      border-color: rgba(212, 163, 115, 0.4);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .audio-icon {
+      display: inline-block;
+      width: 14px;
+      text-align: center;
+    }
+
+    /* Main Center Typography */
+    .center-stage {
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      transform: translateY(-50%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    .handle {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(80px, 14vw, 190px);
+      line-height: 0.85;
+      color: #2a313d;
+      letter-spacing: -0.02em;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+      transition: color 0.4s ease;
+    }
+
+    .nick {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(100px, 18vw, 240px);
+      line-height: 0.85;
+      color: #d1d5db;
+      letter-spacing: -0.02em;
+      text-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+
+    /* Water Reflection */
+    .reflection-container {
+      position: relative;
+      margin-top: -15px;
+      height: clamp(80px, 14vw, 190px);
+      overflow: hidden;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .nick-reflection {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(100px, 18vw, 240px);
+      line-height: 0.85;
+      color: #9ca3af;
+      transform: scaleY(-1);
+      filter: blur(2px);
+      mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 0.8) 80%);
+      -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 0.8) 80%);
+    }
+
+    /* Right Nav Tree with Connected Branch Spine */
+    .sidebar-tree {
+      position: absolute;
+      top: 50%;
+      right: 48px;
+      transform: translateY(-50%);
+      z-index: 10;
+      text-align: right;
+    }
+
+    .tree-branch-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 32px;
+      padding-right: 2px;
+    }
+
+    .tree-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .group-title {
+      font-size: 11px;
+      color: #8c6738;
+      letter-spacing: 0.16em;
+      text-transform: lowercase;
+      margin-bottom: 2px;
+      padding-right: 38px;
+      user-select: none;
+    }
+
+    .tree-items {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .nav-item {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 26px;
+      color: var(--gold);
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      transition: all 0.25s ease;
+      padding: 0;
+      position: relative;
+    }
+
+    .nav-item .nav-label {
+      transition: all 0.25s ease;
+      color: inherit;
+    }
+
+    .nav-item .branch-tick {
+      display: inline-block;
+      width: 24px;
+      height: 1px;
+      background: rgba(212, 163, 115, 0.45);
+      margin-left: 14px;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .nav-item:hover .nav-label {
+      color: #fff;
+      transform: translateX(-3px);
+      text-shadow: 0 0 16px var(--gold-glow);
+    }
+
+    .nav-item:hover .branch-tick {
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      width: 28px;
+    }
+
+    /* Vertical spine connecting branch ticks */
+    .tree-spine {
+      position: absolute;
+      right: 0px;
+      width: 1px;
+      background: rgba(212, 163, 115, 0.45);
+      pointer-events: none;
+      transition: all 0.25s ease;
+    }
+
+    .toast-copy {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(50px);
+      background: rgba(17, 21, 28, 0.95);
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+    }
+
+    .toast-copy.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Notes / Guestbook Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 9, 0.84);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .notes-card {
+      background: linear-gradient(180deg, #0e1219 0%, #080a0e 100%);
+      border: 1px solid rgba(212, 163, 115, 0.25);
+      border-radius: 18px;
+      width: min(92vw, 440px);
+      max-height: min(85vh, 600px);
+      padding: 24px;
+      position: relative;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(212, 163, 115, 0.08);
+      transform: scale(0.96) translateY(12px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-overlay.active .notes-card {
+      transform: scale(1) translateY(0);
+    }
+
+    .notes-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(212, 163, 115, 0.12);
+      padding-bottom: 14px;
+    }
+
+    .notes-title {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 34px;
+      color: var(--gold);
+      line-height: 1;
+      text-shadow: 0 0 16px var(--gold-glow);
+    }
+
+    .notes-subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #616a78;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    .notes-close {
+      background: none;
+      border: none;
+      color: #616a78;
+      font-size: 26px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 4px;
+      transition: all 0.2s ease;
+    }
+
+    .notes-close:hover {
+      color: #fff;
+      transform: rotate(90deg);
+    }
+
+    .notes-feed {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 250px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 6px;
+    }
+
+    .notes-feed::-webkit-scrollbar {
+      width: 4px;
+    }
+    .notes-feed::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+    }
+    .notes-feed::-webkit-scrollbar-thumb {
+      background: rgba(212, 163, 115, 0.3);
+      border-radius: 4px;
+    }
+    .notes-feed::-webkit-scrollbar-thumb:hover {
+      background: var(--gold);
+    }
+
+    .note-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(212, 163, 115, 0.1);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      animation: noteAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .note-item:hover {
+      border-color: rgba(212, 163, 115, 0.25);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    @keyframes noteAppear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .note-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .note-author {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 15px;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+    }
+
+    .note-time {
+      font-family: var(--font-mono);
+      color: #555e6b;
+      font-size: 10px;
+    }
+
+    .note-content {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: #cfd4dc;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .notes-empty {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #555e6b;
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .notes-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid rgba(212, 163, 115, 0.12);
+      padding-top: 14px;
+    }
+
+    .notes-form-row {
+      width: 100%;
+    }
+
+    .notes-input, .notes-textarea {
+      width: 100%;
+      background: #090c10;
+      border: 1px solid rgba(212, 163, 115, 0.18);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #eaeaea;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .notes-input:focus, .notes-textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    .notes-textarea {
+      resize: none;
+    }
+
+    .notes-form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notes-char-count {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #4b5563;
+    }
+
+    .notes-submit-btn {
+      background: rgba(212, 163, 115, 0.12);
+      border: 1px solid rgba(212, 163, 115, 0.35);
+      color: var(--gold);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.04em;
+    }
+
+    .notes-submit-btn:hover {
+      background: var(--gold);
+      color: #07090c;
+      box-shadow: 0 0 14px var(--gold-glow);
+    }
+
+    /* Prompt to click for audio */
+    /* Intro Splash Screen */
+    .splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #07090c;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.75s ease;
+      cursor: pointer;
+    }
+
+    .splash-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-text {
+      font-family: var(--font-hand);
+      font-size: clamp(42px, 7vw, 76px);
+      font-weight: 500;
+      color: #b05c5c;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 28px rgba(176, 92, 92, 0.45);
+      animation: splashPulse 2s ease-in-out infinite alternate;
+    }
+
+    .splash-hint {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #555e6b;
+      letter-spacing: 0.16em;
+      text-transform: lowercase;
+      animation: hintPulse 1.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes hintPulse {
+      0% { opacity: 0.35; transform: translateY(0); }
+      100% { opacity: 0.85; transform: translateY(2px); }
+    }
+
+    @keyframes splashPulse {
+      0% { opacity: 0.8; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1.02); }
+    }
+    /* Hero Center Artwork (rises from bottom to center on enter) */
+    .hero-art-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, calc(-50% + 22vh)) scale(0.92);
+      z-index: 2;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-art-container.visible {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0.82;
+    }
+
+    .hero-art-img {
+      max-height: 82vh;
+      max-width: min(85vw, 680px);
+      object-fit: contain;
+      /* Soft dark vignette so edges blend naturally into the black background */
+      mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 45%, rgba(0, 0, 0, 0) 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 45%, rgba(0, 0, 0, 0) 80%);
+      filter: contrast(1.08) brightness(0.92);
+      user-select: none;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Intro Splash Screen (Click to enter & start music) -->
+  <div class="splash-screen" id="splash-screen">
+    <div class="splash-text">Wirex Client/Coder</div>
+    <div class="splash-hint">[ кликни в любое место ]</div>
+  </div>
+
+  <!-- Hero Center Artwork (rises from bottom to center on enter) -->
+  <div class="hero-art-container" id="hero-art">
+    <video id="hero-art-video" class="hero-art-img" src="art.mp4" playsinline loop muted autoplay></video>
+  </div>
+
+  <!-- Background Rain Canvas -->
+  <canvas id="rain-canvas"></canvas>
+
+  <!-- Top bar info -->
+  <div class="top-bar">
+    <div class="views-counter">
+      <span>👁</span>
+      <span id="view-count">149 просмотров</span>
+    </div>
+
+    <div class="audio-pill" id="audio-toggle" title="Включить / пауза">
+      <span class="audio-icon" id="audio-status">🔊</span>
+      <span id="track-name">teen suicide — no, the moon</span>
+    </div>
+  </div>
+
+  <!-- Center Stage Typography -->
+  <main class="stage">
+    <div class="center-stage">
+      <div class="handle">fameboyq</div>
+      <div class="nick">Fameboyq</div>
+      <div class="reflection-container">
+        <div class="nick-reflection">Fameboyq</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Navigation Tree with connected branch spine -->
+  <aside class="sidebar-tree">
+    <div class="tree-branch-wrapper">
+      <!-- Section 1: Wirex -->
+      <div class="tree-group">
+        <div class="group-title">wirex</div>
+        <div class="tree-items">
+          <a href="https://discord.gg/wj7VzZg9e" target="_blank" rel="noopener noreferrer" class="nav-item">
+            <span class="nav-label">discord</span>
+            <span class="branch-tick"></span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Section 2: Fameboyq -->
+      <div class="tree-group">
+        <div class="group-title">fameboyq</div>
+        <div class="tree-items">
+          <button class="nav-item" id="btn-copy-discord">
+            <span class="nav-label">discord</span>
+            <span class="branch-tick"></span>
+          </button>
+          <a href="https://t.me/fameboyq" target="_blank" rel="noopener noreferrer" class="nav-item">
+            <span class="nav-label">telegram</span>
+            <span class="branch-tick"></span>
+          </a>
+          <a href="https://www.tiktok.com/@renfil_fameboyq" target="_blank" rel="noopener noreferrer" class="nav-item">
+            <span class="nav-label">tiktok</span>
+            <span class="branch-tick"></span>
+          </a>
+          <a href="https://www.youtube.com/@Renfil123" target="_blank" rel="noopener noreferrer" class="nav-item">
+            <span class="nav-label">youtube</span>
+            <span class="branch-tick"></span>
+          </a>
+          <button class="nav-item" id="btn-open-notes">
+            <span class="nav-label">notes</span>
+            <span class="branch-tick"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Vertical spine connecting branch ticks -->
+      <div class="tree-spine" id="tree-spine"></div>
+    </div>
+  </aside>
+
+  <!-- Notes / Guestbook Modal -->
+  <div class="modal-overlay" id="notes-modal">
+    <div class="notes-card">
+      <div class="notes-header">
+        <div class="notes-header-left">
+          <div class="notes-title">Notes</div>
+          <div class="notes-subtitle">оставить след / guestbook</div>
+        </div>
+        <button class="notes-close" id="btn-close-notes" title="Закрыть">×</button>
+      </div>
+
+      <div class="notes-feed" id="notes-feed">
+        <!-- Rendered by JS -->
+      </div>
+
+      <form class="notes-form" id="notes-form">
+        <div class="notes-form-row">
+          <input type="text" id="note-author" class="notes-input" placeholder="твой ник..." maxlength="22" required autocomplete="off">
+        </div>
+        <div class="notes-form-row">
+          <textarea id="note-text" class="notes-textarea" placeholder="напиши что-нибудь..." maxlength="200" rows="2" required></textarea>
+        </div>
+        <div class="notes-form-footer">
+          <span class="notes-char-count" id="notes-char-count">0 / 200</span>
+          <button type="submit" class="notes-submit-btn" id="btn-submit-note">отправить ↵</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hidden Netlify Form to capture all comments into Netlify Dashboard -->
+  <form name="guestbook-notes" method="POST" data-netlify="true" hidden>
+    <input type="hidden" name="form-name" value="guestbook-notes">
+    <input type="text" name="author">
+    <textarea name="message"></textarea>
+  </form>
+
+  <!-- Toast for copying -->
+  <div class="toast-copy" id="toast-msg">скопировано: so_fameboyq</div>
+
+  <!-- Audio element (plays local track) -->
+  <audio id="bg-audio" loop preload="auto" autoplay>
+    <source src="music.mp3" type="audio/mpeg">
+    <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // --- Canvas Rain with Physics and Ripples ---
+    const canvas = document.getElementById('rain-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const drops = [];
+    const ripples = [];
+    const DROP_COUNT = 160;
+
+    class Drop {
+      constructor() {
+        this.reset(true);
+      }
+      reset(init = false) {
+        this.x = Math.random() * (width + 200) - 100;
+        this.y = init ? Math.random() * height : -20;
+        this.z = Math.random() * 0.7 + 0.3; // depth
+        this.length = (Math.random() * 18 + 12) * this.z;
+        this.speedY = (Math.random() * 8 + 14) * this.z;
+        this.speedX = -2 * this.z; // slight slant
+        this.opacity = (Math.random() * 0.3 + 0.15) * this.z;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        // Ground hit threshold (bottom water area)
+        const ground = height - (Math.random() * 80 + 10);
+        if (this.y >= ground) {
+          if (Math.random() < 0.6) {
+            ripples.push(new Ripple(this.x, this.y, this.z));
+          }
+          this.reset();
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.speedX * 1.5, this.y + this.length);
+        ctx.strokeStyle = `rgba(180, 200, 220, ${this.opacity})`;
+        ctx.lineWidth = 1.2 * this.z;
+        ctx.stroke();
+      }
+    }
+
+    class Ripple {
+      constructor(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.radiusX = 1;
+        this.radiusY = 0.3;
+        this.maxRadius = (Math.random() * 22 + 10) * z;
+        this.growRate = (Math.random() * 0.6 + 0.8) * z;
+        this.opacity = 0.5 * z;
+      }
+      update() {
+        this.radiusX += this.growRate;
+        this.radiusY = this.radiusX * 0.35;
+        this.opacity -= 0.012;
+      }
+      draw() {
+        if (this.opacity <= 0) return;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y, this.radiusX, this.radiusY, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(180, 205, 235, ${this.opacity})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < DROP_COUNT; i++) {
+      drops.push(new Drop());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Rain drops
+      for (let i = 0; i < drops.length; i++) {
+        drops[i].update();
+        drops[i].draw();
+      }
+
+      // Ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        ripples[i].update();
+        ripples[i].draw();
+        if (ripples[i].opacity <= 0) {
+          ripples.splice(i, 1);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- Audio Control ---
+    const audio = document.getElementById('bg-audio');
+    const audioToggle = document.getElementById('audio-toggle');
+    const audioIcon = document.getElementById('audio-status');
+    let isPlaying = false;
+
+    function startPlayback() {
+      if (isPlaying) return;
+      audio.play().then(() => {
+        isPlaying = true;
+        audioIcon.textContent = '🔊';
+      }).catch(() => {
+        audioIcon.textContent = '🔇';
+      });
+    }
+
+    // Try autoplaying immediately on page load
+    startPlayback();
+
+    // If browser policy blocked silent autoplay, start on ANY movement, keypress, scroll or click
+    const onUserActive = () => {
+      startPlayback();
+      ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(ev => {
+        window.removeEventListener(ev, onUserActive);
+      });
+    };
+
+    ['click', 'mousemove', 'keydown', 'scroll', 'touchstart'].forEach(ev => {
+      window.addEventListener(ev, onUserActive, { once: true, passive: true });
+    });
+
+    // Toggle button: pauses or resumes manually
+    audioToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (audio.paused) {
+        audio.play().then(() => {
+          isPlaying = true;
+          audioIcon.textContent = '🔊';
+        });
+      } else {
+        audio.pause();
+        isPlaying = false;
+        audioIcon.textContent = '🔇';
+      }
+    });
+
+    // --- Copy Discord tag ---
+    const btnCopy = document.getElementById('btn-copy-discord');
+    const toast = document.getElementById('toast-msg');
+
+    btnCopy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText('so_fameboyq').then(() => {
+        toast.textContent = 'скопировано: so_fameboyq';
+        toast.classList.add('active');
+        setTimeout(() => {
+          toast.classList.remove('active');
+        }, 2200);
+      });
+    });
+
+    // --- Dynamic Vertical Spine connecting branch ticks ---
+    function updateTreeSpine() {
+      const ticks = document.querySelectorAll('.branch-tick');
+      const spine = document.getElementById('tree-spine');
+      const wrapper = document.querySelector('.tree-branch-wrapper');
+      if (!spine || ticks.length < 2 || !wrapper) return;
+
+      const firstTick = ticks[0];
+      const lastTick = ticks[ticks.length - 1];
+
+      const firstRect = firstTick.getBoundingClientRect();
+      const lastRect = lastTick.getBoundingClientRect();
+      const wrapperRect = wrapper.getBoundingClientRect();
+
+      const top = (firstRect.top + firstRect.height / 2) - wrapperRect.top;
+      const height = (lastRect.top + lastRect.height / 2) - (firstRect.top + firstRect.height / 2);
+      const right = wrapperRect.right - firstRect.right;
+
+      spine.style.top = `${top}px`;
+      spine.style.height = `${height}px`;
+      spine.style.right = `${right}px`;
+    }
+
+    window.addEventListener('resize', updateTreeSpine);
+    window.addEventListener('load', updateTreeSpine);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(updateTreeSpine);
+    }
+    setTimeout(updateTreeSpine, 100);
+    setTimeout(updateTreeSpine, 400);
+
+    // --- Notes / Guestbook functionality ---
+    const btnOpenNotes = document.getElementById('btn-open-notes');
+    const btnCloseNotes = document.getElementById('btn-close-notes');
+    const notesModal = document.getElementById('notes-modal');
+    const notesFeed = document.getElementById('notes-feed');
+    const notesForm = document.getElementById('notes-form');
+    const noteAuthorInput = document.getElementById('note-author');
+    const noteTextInput = document.getElementById('note-text');
+    const notesCharCount = document.getElementById('notes-char-count');
+
+    const NOTES_STORAGE_KEY = 'fameboyq_guestbook_notes_v2';
+    const DEFAULT_NOTES = [
+      { author: 'wirex', text: 'wirex client on top ⚡', time: '08.10.2026' },
+      { author: 'fameboyq', text: 'добро пожаловать. оставляйте свои записи и отзывы', time: '09.10.2026' }
+    ];
+
+    function getStoredNotes() {
+      try {
+        const raw = localStorage.getItem(NOTES_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return [...DEFAULT_NOTES];
+    }
+
+    function saveNotes(notes) {
+      try {
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+      } catch (e) {}
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderNotes() {
+      if (!notesFeed) return;
+      const notes = getStoredNotes();
+      notesFeed.innerHTML = '';
+
+      if (notes.length === 0) {
+        notesFeed.innerHTML = '<div class="notes-empty">пока нет записей. будь первым</div>';
+        return;
+      }
+
+      notes.forEach((note) => {
+        const item = document.createElement('div');
+        item.className = 'note-item';
+        item.innerHTML = `
+          <div class="note-meta">
+            <span class="note-author">${escapeHtml(note.author)}</span>
+            <span class="note-time">${escapeHtml(note.time)}</span>
+          </div>
+          <div class="note-content">${escapeHtml(note.text)}</div>
+        `;
+        notesFeed.appendChild(item);
+      });
+
+      notesFeed.scrollTop = notesFeed.scrollHeight;
+    }
+
+    function openNotesModal() {
+      if (!notesModal) return;
+      notesModal.classList.add('active');
+      renderNotes();
+      const cachedAuthor = localStorage.getItem('fameboyq_cached_author') || '';
+      if (cachedAuthor && noteAuthorInput) {
+        noteAuthorInput.value = cachedAuthor;
+        if (noteTextInput) noteTextInput.focus();
+      } else if (noteAuthorInput) {
+        noteAuthorInput.focus();
+      }
+    }
+
+    function closeNotesModal() {
+      if (!notesModal) return;
+      notesModal.classList.remove('active');
+    }
+
+    if (btnOpenNotes) {
+      btnOpenNotes.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openNotesModal();
+      });
+    }
+
+    if (btnCloseNotes) {
+      btnCloseNotes.addEventListener('click', closeNotesModal);
+    }
+
+    if (notesModal) {
+      notesModal.addEventListener('click', (e) => {
+        if (e.target === notesModal) {
+          closeNotesModal();
+        }
+      });
+    }
+
+    if (noteTextInput && notesCharCount) {
+      noteTextInput.addEventListener('input', () => {
+        notesCharCount.textContent = `${noteTextInput.value.length} / 200`;
+      });
+    }
+
+    if (notesForm) {
+      notesForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const author = (noteAuthorInput.value || '').trim();
+        const text = (noteTextInput.value || '').trim();
+        if (!author || !text) return;
+
+        localStorage.setItem('fameboyq_cached_author', author);
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const timeFormatted = `${dateStr}, ${timeStr}`;
+
+        const notes = getStoredNotes();
+        notes.push({
+          author: author,
+          text: text,
+          time: timeFormatted
+        });
+        saveNotes(notes);
+        renderNotes();
+
+        try {
+          const formData = new URLSearchParams();
+          formData.append('form-name', 'guestbook-notes');
+          formData.append('author', author);
+          formData.append('message', text);
+          fetch('/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+          }).catch(() => {});
+        } catch (err) {}
+
+        noteTextInput.value = '';
+        if (notesCharCount) notesCharCount.textContent = '0 / 200';
+
+        toast.textContent = 'запись сохранена!';
+        toast.classList.add('active');
+        setTimeout(() => {
+          toast.classList.remove('active');
+          toast.textContent = 'скопировано: so_fameboyq';
+        }, 2200);
+      });
+    }
+
+    // --- Real Global View Counter via CountAPI ---
+    const viewCountEl = document.getElementById('view-count');
+    const COUNTER_KEY = 'fameboyq_official_views_live';
+    const isCountedSession = sessionStorage.getItem('visited_session');
+
+    const apiEndpoint = isCountedSession
+      ? `https://countapi.mileshilliard.com/api/v1/get/${COUNTER_KEY}`
+      : `https://countapi.mileshilliard.com/api/v1/hit/${COUNTER_KEY}`;
+
+    fetch(apiEndpoint)
+      .then(res => res.json())
+      .then(data => {
+        sessionStorage.setItem('visited_session', 'true');
+        const count = data.value || 1;
+        viewCountEl.textContent = `${count} просмотров`;
+        localStorage.setItem('cached_views', count);
+      })
+      .catch(() => {
+        // Fallback to local storage if offline
+        let fallbackViews = parseInt(localStorage.getItem('cached_views') || '1', 10) + 1;
+        localStorage.setItem('cached_views', fallbackViews);
+        viewCountEl.textContent = `${fallbackViews} просмотров`;
+      });
+
+    // --- Splash Screen: Click to enter & guaranteed music playback ---
+    const splash = document.getElementById('splash-screen');
+    const heroArt = document.getElementById('hero-art');
+
+    function enterSite() {
+      if (splash && !splash.classList.contains('hidden')) {
+        splash.classList.add('hidden');
+        if (heroArt) {
+          heroArt.classList.add('visible');
+        }
+        const heroVideo = document.getElementById('hero-art-video');
+        if (heroVideo) {
+          heroVideo.currentTime = 0;
+          heroVideo.play().catch(() => {});
+        }
+        updateTreeSpine();
+        audio.play().then(() => {
+          isPlaying = true;
+          audioIcon.textContent = '🔊';
+        }).catch(() => {
+          audioIcon.textContent = '🔇';
+        });
+      }
+    }
+
+    if (splash) {
+      splash.addEventListener('click', enterSite);
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        enterSite();
+      }
+    });
+  </script>
+</body>
+</html>
