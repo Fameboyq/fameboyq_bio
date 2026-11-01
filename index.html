@@ -616,7 +616,7 @@
 
     <div class="audio-pill" id="audio-toggle" title="Включить / пауза">
       <span class="audio-icon" id="audio-status">🔊</span>
-      <span id="track-name">teen suicide — no, the moon</span>
+      <span id="track-name">death note edit</span>
     </div>
   </div>
 
@@ -861,15 +861,23 @@
     // Toggle button: pauses or resumes manually
     audioToggle.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (audio.paused) {
-        audio.play().then(() => {
-          isPlaying = true;
-          audioIcon.textContent = '🔊';
-        });
-      } else {
+      const heroVideo = document.getElementById('hero-art-video');
+      if (isPlaying) {
+        if (heroVideo) {
+          heroVideo.muted = true;
+        }
         audio.pause();
         isPlaying = false;
         audioIcon.textContent = '🔇';
+      } else {
+        if (heroVideo) {
+          heroVideo.muted = false;
+          heroVideo.play().catch(() => {});
+        } else {
+          audio.play().catch(() => {});
+        }
+        isPlaying = true;
+        audioIcon.textContent = '🔊';
       }
     });
 
@@ -1108,18 +1116,33 @@
         if (heroArt) {
           heroArt.classList.add('visible');
         }
+        updateTreeSpine();
         const heroVideo = document.getElementById('hero-art-video');
         if (heroVideo) {
           heroVideo.currentTime = 0;
-          heroVideo.play().catch(() => {});
+          heroVideo.muted = false;
+          heroVideo.volume = 1.0;
+          heroVideo.play().then(() => {
+            isPlaying = true;
+            audioIcon.textContent = '🔊';
+          }).catch(() => {
+            audio.currentTime = 0;
+            audio.play().then(() => {
+              isPlaying = true;
+              audioIcon.textContent = '🔊';
+            }).catch(() => {
+              audioIcon.textContent = '🔇';
+            });
+          });
+        } else {
+          audio.currentTime = 0;
+          audio.play().then(() => {
+            isPlaying = true;
+            audioIcon.textContent = '🔊';
+          }).catch(() => {
+            audioIcon.textContent = '🔇';
+          });
         }
-        updateTreeSpine();
-        audio.play().then(() => {
-          isPlaying = true;
-          audioIcon.textContent = '🔊';
-        }).catch(() => {
-          audioIcon.textContent = '🔇';
-        });
       }
     }
 
