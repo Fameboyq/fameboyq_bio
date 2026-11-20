@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fameboyq</title>
+  <link rel="icon" type="image/png" href="art.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Instrument+Serif:ital@0;1&family=Martian+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -591,19 +592,33 @@
       user-select: none;
       pointer-events: none;
     }
+
+    /* Фоновое видео на весь экран (за текстом) */
+    .bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* видео целиком, по центру, без растягивания */
+      z-index: 0;
+      opacity: 0.6;      /* затемнение, чтобы текст читался; 1 = без затемнения */
+      pointer-events: none;
+      /* мягкие края, чтобы видео плавно уходило в чёрный фон сайта */
+      mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 90%);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 90%);
+    }
   </style>
 </head>
 <body>
+
+  <!-- Фоновое видео (без звука, играет музыка сайта) -->
+  <video class="bg-video" src="bg.mp4" autoplay muted loop playsinline preload="auto"></video>
 
   <!-- Intro Splash Screen (Click to enter & start music) -->
   <div class="splash-screen" id="splash-screen">
     <div class="splash-text">Wirex Client/Coder</div>
     <div class="splash-hint">[ кликни в любое место ]</div>
-  </div>
-
-  <!-- Hero Center Artwork (rises from bottom to center on enter) -->
-  <div class="hero-art-container" id="hero-art">
-    <img src="art.png" alt="Artwork" class="hero-art-img">
   </div>
 
   <!-- Background Rain Canvas -->
@@ -721,8 +736,8 @@
 
   <!-- Audio element (plays local track) -->
   <audio id="bg-audio" loop preload="auto" autoplay>
+    <source src="track.mp3" type="audio/mpeg">
     <source src="music.mp3" type="audio/mpeg">
-    <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" type="audio/mpeg">
   </audio>
 
   <script>
